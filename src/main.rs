@@ -4,6 +4,7 @@ mod lib;
 
 use std::default::Default;
 use std::io::Result;
+use std::process::exit;
 
 use irc::client::prelude::Config;
 
@@ -36,13 +37,10 @@ fn handle_config() -> Result<Config> {
 			};
 
 			println!("Failed to open config: {}", err);
-			println!("Trying to write default config...");
-
 			try!(config.save(lib::CONFIG_PATH));
+			println!("Exiting: Config wrote, please make sure to set your defaults!");
 
-			println!("Default config wrote, please make sure to set your defaults!");
-
-			Ok(config)
+			exit(0);
 		}
 	}
 }
