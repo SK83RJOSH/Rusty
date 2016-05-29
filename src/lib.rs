@@ -123,7 +123,7 @@ fn cmd_join(args: Vec<String>, server: IrcServer, target: String, sender: String
 	let channel = args.first();
 
 	if let Some(channel) = channel {
-		if channel.starts_with("#") {
+		if channel.starts_with("#") && !channel.contains(",") {
 			try!(server.send_join(channel));
 
 			let config = server.config().clone();
