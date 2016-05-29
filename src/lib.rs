@@ -126,6 +126,7 @@ fn cmd_join(args: Vec<String>, server: IrcServer, target: String, sender: String
 		if channel.starts_with("#") && !channel.contains(",") {
 			try!(server.send_join(channel));
 
+			// TODO: Is it worth writing a more generic function for updating the config?
 			let config = server.config().clone();
 
 			if let Some(ref channels) = config.channels {
@@ -159,6 +160,7 @@ fn cmd_part(args: Vec<String>, server: IrcServer, target: String, sender: String
 		if channel.starts_with("#") {
 			try!(server.send(Command::PART(channel.to_string(), None)));
 
+			// TODO: Is it worth writing a more generic function for updating the config?
 			let config = server.config().clone();
 
 			if let Some(ref channels) = config.channels {
