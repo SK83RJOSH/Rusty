@@ -1,0 +1,10 @@
+[package]
+authors = ["SK83RJOSH <sk83rjosh83@yahoo.com>"]
+name = "irc_bot"
+version = "0.1.0"
+
+[dependencies]
+irc = { version = '*', default-features = false }
+
+#[target.'cfg(unix)'.dependencies]
+#irc = { version = '*', default-features = true }
