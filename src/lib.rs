@@ -7,8 +7,8 @@ use irc::client::prelude::*;
 pub static CONFIG_PATH: &'static str = "config.json";
 
 pub struct Bot {
-	cmds: HashMap<String, Box<Fn(Vec<String>, IrcServer, String, String) -> Result<()>>>,
-	owner_cmds: HashMap<String, Box<Fn(Vec<String>, IrcServer, String, String) -> Result<()>>>,
+	cmds: HashMap<String, Box<Fn(Vec<String>, &IrcServer, String, String) -> Result<()>>>,
+	owner_cmds: HashMap<String, Box<Fn(Vec<String>, &IrcServer, String, String) -> Result<()>>>,
 	server: IrcServer,
 }
 
@@ -34,12 +34,10 @@ impl Bot {
 		Ok(bot)
 	}
 
-	pub fn run(&mut self) {
-		let server = self.server.clone();
+	pub fn run(&self) {
+		self.server.identify().unwrap();
 
-		server.identify().unwrap();
-
-		for message in server.iter() {
+		for message in self.server.iter() {
 			if let Ok(message) = message {
 				println!("{}", message);
 
@@ -56,7 +54,7 @@ impl Bot {
 		}
 	}
 
-	fn handle_privmsg(&mut self, target: String, text: String, sender: String) {
+	fn handle_privmsg(&self, target: String, text: String, sender: String) {
 		let is_private = self.server.current_nickname() == target;
 		let is_bang = text.starts_with("!");
 		let is_command = is_private || is_bang;
@@ -73,17 +71,17 @@ impl Bot {
 		}
 	}
 
-	fn handle_command(&mut self, text: String, target: String, sender: String) -> Result<()> {
+	fn handle_command(&self, text: String, target: String, sender: String) -> Result<()> {
 		let mut strs = text.split_whitespace();
 		let command = strs.next().unwrap();
 		let args = strs.map(|s| s.into()).collect::<Vec<String>>();
 
 		// TODO: Pack command data into a struct to avoid unused warnings and benefit from typed variable
 		if let Some(command) = self.cmds.get(command) {
-			try!(command(args, self.server.clone(), target, sender));
+			try!(command(args, &self.server, target, sender));
 		} else if let Some(command) = self.owner_cmds.get(command) {
 			if self.server.config().is_owner(&sender) {
-				try!(command(args, self.server.clone(), target, sender));
+				try!(command(args, &self.server, target, sender));
 			} else {
 				try!(self.server.send_notice(&sender, "You don't have permission to do that!"))
 			}
@@ -96,12 +94,12 @@ impl Bot {
 }
 
 #[allow(unused)]
-fn cmd_echo(args: Vec<String>, server: IrcServer, target: String, sender: String) -> Result<()> {
+fn cmd_echo(args: Vec<String>, server: &IrcServer, target: String, sender: String) -> Result<()> {
 	try!(server.send_privmsg(&target, &args.join(" ")));
 	Ok(())
 }
 
-fn cmd_kick(args: Vec<String>, server: IrcServer, target: String, sender: String) -> Result<()> {
+fn cmd_kick(args: Vec<String>, server: &IrcServer, target: String, sender: String) -> Result<()> {
 	if sender != target {
 		let who = args.first();
 
@@ -119,7 +117,7 @@ fn cmd_kick(args: Vec<String>, server: IrcServer, target: String, sender: String
 }
 
 #[allow(unused)]
-fn cmd_join(args: Vec<String>, server: IrcServer, target: String, sender: String) -> Result<()> {
+fn cmd_join(args: Vec<String>, server: &IrcServer, target: String, sender: String) -> Result<()> {
 	let channel = args.first();
 
 	if let Some(channel) = channel {
@@ -149,7 +147,7 @@ fn cmd_join(args: Vec<String>, server: IrcServer, target: String, sender: String
 	Ok(())
 }
 
-fn cmd_part(args: Vec<String>, server: IrcServer, target: String, sender: String) -> Result<()> {
+fn cmd_part(args: Vec<String>, server: &IrcServer, target: String, sender: String) -> Result<()> {
 	let mut channel = args.first();
 
 	if channel.is_none() && target != sender {
