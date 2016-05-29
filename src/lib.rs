@@ -148,7 +148,6 @@ fn cmd_join(args: Vec<String>, server: IrcServer, target: String, sender: String
 	Ok(())
 }
 
-#[allow(unused)]
 fn cmd_part(args: Vec<String>, server: IrcServer, target: String, sender: String) -> Result<()> {
 	let mut channel = args.first();
 
@@ -158,7 +157,7 @@ fn cmd_part(args: Vec<String>, server: IrcServer, target: String, sender: String
 
 	if let Some(channel) = channel {
 		if channel.starts_with("#") {
-			server.send(Command::PART(channel.to_string(), None));
+			try!(server.send(Command::PART(channel.to_string(), None)));
 
 			let config = server.config().clone();
 
