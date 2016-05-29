@@ -18,7 +18,7 @@ fn main() {
 			println!("Failed to spawn bot instance: {}", err);
 		}
 	} else {
-		println!("Failed to acces config file, do you have read/write permissions?");
+		println!("Failed to access config file, do you have read/write permissions?");
 	}
 }
 
@@ -38,7 +38,8 @@ fn handle_config() -> Result<Config> {
 
 			println!("Failed to open config: {}", err);
 			try!(config.save(lib::CONFIG_PATH));
-			println!("Exiting: Config wrote, please make sure to set your defaults!");
+			println!("Wrote default config to {}!", lib::CONFIG_PATH);
+			println!("Now exiting...");
 
 			exit(0);
 		}
