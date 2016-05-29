@@ -133,7 +133,7 @@ fn cmd_join(args: Vec<String>, server: IrcServer, target: String, sender: String
 				let mut channels = channels.clone();
 
 				channels.retain(|element| element != channel);
-				channels.push(channel.to_string());
+				channels.push(channel.clone());
 
 				let config = Config { channels: Some(channels), ..config };
 
@@ -158,7 +158,7 @@ fn cmd_part(args: Vec<String>, server: IrcServer, target: String, sender: String
 
 	if let Some(channel) = channel {
 		if channel.starts_with("#") {
-			try!(server.send(Command::PART(channel.to_string(), None)));
+			try!(server.send(Command::PART(channel.clone(), None)));
 
 			// TODO: Is it worth writing a more generic function for updating the config?
 			let config = server.config().clone();
