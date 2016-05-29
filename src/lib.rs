@@ -65,13 +65,10 @@ impl Bot {
 		let command = strs.next().unwrap();
 		let args = strs.collect::<Vec<&str>>();
 
-		match self.cmds.get(command) {
-			Some(command) => try!(command(&args, &self.server, target)),
-			_ => {
-				if !target.starts_with("#") {
-					try!(self.server.send_privmsg(target, "Unknown command."));
-				}
-			}
+		if let Some(command) = self.cmds.get(command) {
+			try!(command(&args, &self.server, target));
+		} else if !target.starts_with("#") {
+			try!(self.server.send_privmsg(target, "Unknown command."));
 		}
 
 		Ok(())
