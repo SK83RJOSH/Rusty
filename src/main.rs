@@ -12,7 +12,7 @@ fn main() {
 	if let Ok(config) = handle_config() {
 		let bot = lib::Bot::new(config);
 
-		if let Ok(mut bot) = bot {
+		if let Ok(bot) = bot {
 			bot.run()
 		} else if let Err(err) = bot {
 			println!("Failed to spawn bot instance: {}", err);
