@@ -4,12 +4,13 @@ mod commands;
 
 use std::io::Result;
 use std::collections::HashMap;
+
 use irc::client::prelude::*;
 
 pub static CONFIG_PATH: &'static str = "config.json";
 
 pub struct Bot {
-	cmds: HashMap<String, Box<commands::Command>>,
+	cmds: HashMap<String, commands::Command>,
 	server: IrcServer,
 }
 
@@ -21,11 +22,54 @@ impl Bot {
 			server: try!(IrcServer::from_config(config)),
 		};
 
-		bot.cmds.insert("echo".into(), Box::new(commands::EchoCommand::new()));
-		bot.cmds.insert("say".into(), Box::new(commands::EchoCommand::new()));
-		bot.cmds.insert("kick".into(), Box::new(commands::KickCommand::new()));
-		bot.cmds.insert("join".into(), Box::new(commands::JoinCommand::new()));
-		bot.cmds.insert("part".into(), Box::new(commands::PartCommand::new()));
+		bot.cmds.insert("say".into(),
+		                commands::build_command(false,
+		                                        "".into(),
+		                                        vec![commands::CommandArg {
+			                                             required: true,
+			                                             name: "text".into(),
+		                                             }],
+		                                        Box::new(cmd_say)));
+
+		bot.cmds.insert("echo".into(),
+		                commands::build_command(false,
+		                                        "".into(),
+		                                        vec![commands::CommandArg {
+			                                             required: true,
+			                                             name: "text".into(),
+		                                             }],
+		                                        Box::new(cmd_say)));
+
+		bot.cmds.insert("kick".into(),
+		                commands::build_command(true,
+		                                        "admin".into(),
+		                                        vec![commands::CommandArg {
+			                                             required: true,
+			                                             name: "nick".into(),
+		                                             },
+		                                             commands::CommandArg {
+			                                             required: false,
+			                                             name: "reason".into(),
+		                                             }],
+		                                        Box::new(cmd_kick)));
+
+		bot.cmds.insert("join".into(),
+		                commands::build_command(true,
+		                                        "admin".into(),
+		                                        vec![commands::CommandArg {
+			                                             required: false,
+			                                             name: "channel".into(),
+		                                             }],
+		                                        Box::new(cmd_join)));
+
+		bot.cmds.insert("part".into(),
+		                commands::build_command(true,
+		                                        "admin".into(),
+		                                        vec![commands::CommandArg {
+			                                             required: false,
+			                                             name: "channel".into(),
+		                                             }],
+		                                        Box::new(cmd_part)));
 
 		Ok(bot)
 	}
@@ -74,11 +118,108 @@ impl Bot {
 		let input = args.join(" ");
 
 		if let Some(command) = self.cmds.get(command) {
-			try!(command.execute(input, &self.server, target, sender));
+			try!(commands::execute(command, input, &self.server, target, sender));
 		} else if !target.starts_with("#") {
-			try!(self.server.send_privmsg(&target, "Unknown command."));
+			try!(self.server.send_privmsg(&target, &format!("Unknown command {}", command)));
 		}
 
 		Ok(())
 	}
+}
+
+fn cmd_say(parameters: commands::CommandParameters) -> Result<()> {
+	if let Some(text) = parameters.args.get("text") {
+		try!(parameters.server.send_privmsg(&parameters.target, text));
+	}
+
+	Ok(())
+}
+
+fn cmd_kick(parameters: commands::CommandParameters) -> Result<()> {
+	if parameters.sender != parameters.target {
+		if let Some(nick) = parameters.args.get("nick") {
+			if nick == parameters.server.current_nickname() {
+				try!(parameters.server.send_kick(&parameters.target, &parameters.sender, "No you."))
+			} else if let Some(reason) = parameters.args
+				.get("reason")
+				.or(Some(&"Requested".to_string())) {
+				try!(parameters.server.send_kick(&parameters.target, &nick, reason))
+			}
+		} else {
+			try!(parameters.server.send_notice(&parameters.sender,
+			                                   "Command arguments are !kick <nick> [reason]"))
+		}
+	} else {
+		try!(parameters.server.send_privmsg(&parameters.sender,
+		                                    "You can't kick people from a private chat..."))
+	}
+
+	Ok(())
+}
+
+fn cmd_join(parameters: commands::CommandParameters) -> Result<()> {
+	let sender = parameters.sender;
+	let server = parameters.server;
+	let target = parameters.target;
+
+	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
+		if channel != &sender {
+			if channel.starts_with("#") && !channel.contains(",") {
+				try!(server.send_join(channel));
+
+				// TODO: Is it worth writing a more generic function for updating the config?
+				let config = server.config().clone();
+
+				if let Some(ref channels) = config.channels {
+					let mut channels = channels.clone();
+
+					channels.retain(|element| element != channel);
+					channels.push(channel.clone());
+
+					let config = Config { channels: Some(channels), ..config };
+
+					try!(config.save(CONFIG_PATH));
+				}
+			} else {
+				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
+			}
+		} else {
+			try!(server.send_notice(&sender, &commands::build_help(parameters.command)));
+		}
+	}
+
+	Ok(())
+}
+
+fn cmd_part(parameters: commands::CommandParameters) -> Result<()> {
+	let sender = parameters.sender;
+	let server = parameters.server;
+	let target = parameters.target;
+
+	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
+		if channel != &sender {
+			if channel.starts_with("#") && !channel.contains(",") {
+				try!(server.send(Command::PART(channel.clone(), None)));
+
+				// TODO: Is it worth writing a more generic function for updating the config?
+				let config = server.config().clone();
+
+				if let Some(ref channels) = config.channels {
+					let mut channels = channels.clone();
+
+					channels.retain(|element| element != channel);
+
+					let config = Config { channels: Some(channels), ..config };
+
+					try!(config.save(CONFIG_PATH));
+				}
+			} else {
+				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
+			}
+		} else {
+			try!(server.send_notice(&sender, &commands::build_help(parameters.command)));
+		}
+	}
+
+	Ok(())
 }
