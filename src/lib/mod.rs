@@ -120,7 +120,7 @@ impl Bot {
 		if let Some(command) = self.cmds.get(command) {
 			try!(commands::execute(command, input, &self.server, target, sender));
 		} else if !target.starts_with("#") {
-			try!(self.server.send_privmsg(&target, &format!("Unknown command {}", command)));
+			try!(self.server.send_privmsg(&target, &format!("{}: Unknown command", command)));
 		}
 
 		Ok(())
