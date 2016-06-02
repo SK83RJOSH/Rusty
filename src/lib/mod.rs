@@ -23,53 +23,53 @@ impl Bot {
 		};
 
 		bot.cmds.insert("say".into(),
-		                commands::build_command(false,
-		                                        "".into(),
-		                                        vec![commands::CommandArg {
-			                                             required: true,
-			                                             name: "text".into(),
-		                                             }],
-		                                        Box::new(cmd_say)));
+		                commands::Command::new(false,
+		                                       "".into(),
+		                                       vec![commands::CommandArg {
+			                                            required: true,
+			                                            name: "text".into(),
+		                                            }],
+		                                       Box::new(cmd_say)));
 
 		bot.cmds.insert("echo".into(),
-		                commands::build_command(false,
-		                                        "".into(),
-		                                        vec![commands::CommandArg {
-			                                             required: true,
-			                                             name: "text".into(),
-		                                             }],
-		                                        Box::new(cmd_say)));
+		                commands::Command::new(false,
+		                                       "".into(),
+		                                       vec![commands::CommandArg {
+			                                            required: true,
+			                                            name: "text".into(),
+		                                            }],
+		                                       Box::new(cmd_say)));
 
 		bot.cmds.insert("kick".into(),
-		                commands::build_command(true,
-		                                        "admin".into(),
-		                                        vec![commands::CommandArg {
-			                                             required: true,
-			                                             name: "nick".into(),
-		                                             },
-		                                             commands::CommandArg {
-			                                             required: false,
-			                                             name: "reason".into(),
-		                                             }],
-		                                        Box::new(cmd_kick)));
+		                commands::Command::new(true,
+		                                       "admin".into(),
+		                                       vec![commands::CommandArg {
+			                                            required: true,
+			                                            name: "nick".into(),
+		                                            },
+		                                            commands::CommandArg {
+			                                            required: false,
+			                                            name: "reason".into(),
+		                                            }],
+		                                       Box::new(cmd_kick)));
 
 		bot.cmds.insert("join".into(),
-		                commands::build_command(true,
-		                                        "admin".into(),
-		                                        vec![commands::CommandArg {
-			                                             required: false,
-			                                             name: "channel".into(),
-		                                             }],
-		                                        Box::new(cmd_join)));
+		                commands::Command::new(true,
+		                                       "admin".into(),
+		                                       vec![commands::CommandArg {
+			                                            required: false,
+			                                            name: "channel".into(),
+		                                            }],
+		                                       Box::new(cmd_join)));
 
 		bot.cmds.insert("part".into(),
-		                commands::build_command(true,
-		                                        "admin".into(),
-		                                        vec![commands::CommandArg {
-			                                             required: false,
-			                                             name: "channel".into(),
-		                                             }],
-		                                        Box::new(cmd_part)));
+		                commands::Command::new(true,
+		                                       "admin".into(),
+		                                       vec![commands::CommandArg {
+			                                            required: false,
+			                                            name: "channel".into(),
+		                                            }],
+		                                       Box::new(cmd_part)));
 
 		Ok(bot)
 	}
@@ -118,7 +118,7 @@ impl Bot {
 		let input = args.join(" ");
 
 		if let Some(command) = self.cmds.get(command) {
-			try!(commands::execute(command, input, &self.server, target, sender));
+			try!(command.execute(input, &self.server, target, sender));
 		} else if !target.starts_with("#") {
 			try!(self.server.send_privmsg(&target, &format!("{}: Unknown command", command)));
 		}
@@ -184,7 +184,7 @@ fn cmd_join(parameters: commands::CommandParameters) -> Result<()> {
 				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
 			}
 		} else {
-			try!(server.send_notice(&sender, &commands::build_help(parameters.command)));
+			try!(server.send_notice(&sender, &parameters.command.help()));
 		}
 	}
 
@@ -217,7 +217,7 @@ fn cmd_part(parameters: commands::CommandParameters) -> Result<()> {
 				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
 			}
 		} else {
-			try!(server.send_notice(&sender, &commands::build_help(parameters.command)));
+			try!(server.send_notice(&sender, &parameters.command.help()));
 		}
 	}
 
