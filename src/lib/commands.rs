@@ -12,6 +12,15 @@ pub struct CommandArg {
 	pub name: String,
 }
 
+impl CommandArg {
+	pub fn new(name: &str, required: bool) -> Self {
+		CommandArg {
+			name: name.into(),
+			required: required,
+		}
+	}
+}
+
 pub struct CommandParameters<'a> {
 	pub command: &'a Command,
 	pub args: HashMap<String, String>,
@@ -29,13 +38,13 @@ pub struct Command {
 
 impl Command {
 	pub fn new(owner_only: bool,
-	           group: String,
+	           group: &str,
 	           args: Vec<CommandArg>,
 	           handler: Box<Fn(CommandParameters) -> Result<()>>)
 	           -> Self {
 		Command {
 			owner_only: owner_only,
-			group: group,
+			group: group.into(),
 			args: args,
 			handler: handler,
 		}

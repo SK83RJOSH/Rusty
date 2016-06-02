@@ -29,51 +29,33 @@ impl Bot {
 
 		bot.cmds.insert("say".into(),
 		                Command::new(false,
-		                             "".into(),
-		                             vec![CommandArg {
-			                                  required: true,
-			                                  name: "text".into(),
-		                                  }],
+		                             "",
+		                             vec![CommandArg::new("text", true)],
 		                             Box::new(cmd_say)));
 
 		bot.cmds.insert("echo".into(),
 		                Command::new(false,
-		                             "".into(),
-		                             vec![CommandArg {
-			                                  required: true,
-			                                  name: "text".into(),
-		                                  }],
+		                             "",
+		                             vec![CommandArg::new("text", true)],
 		                             Box::new(cmd_say)));
 
 		bot.cmds.insert("kick".into(),
 		                Command::new(true,
-		                             "admin".into(),
-		                             vec![CommandArg {
-			                                  required: true,
-			                                  name: "nick".into(),
-		                                  },
-		                                  CommandArg {
-			                                  required: false,
-			                                  name: "reason".into(),
-		                                  }],
+		                             "admin",
+		                             vec![CommandArg::new("nick", true),
+		                                  CommandArg::new("reason", false)],
 		                             Box::new(cmd_kick)));
 
 		bot.cmds.insert("join".into(),
 		                Command::new(true,
-		                             "admin".into(),
-		                             vec![CommandArg {
-			                                  required: false,
-			                                  name: "channel".into(),
-		                                  }],
+		                             "admin",
+		                             vec![CommandArg::new("channel", true)],
 		                             Box::new(cmd_join)));
 
 		bot.cmds.insert("part".into(),
 		                Command::new(true,
-		                             "admin".into(),
-		                             vec![CommandArg {
-			                                  required: false,
-			                                  name: "channel".into(),
-		                                  }],
+		                             "admin",
+		                             vec![CommandArg::new("channel", true)],
 		                             Box::new(cmd_part)));
 
 		Ok(bot)
