@@ -43,16 +43,15 @@ impl Command {
 
 	pub fn arguments(&self, input: String) -> Result<HashMap<String, String>> {
 		let mut map = HashMap::new();
-		let mut args = self.args.iter();
 		let col = input.split_whitespace().map(|word| word.into()).collect::<Vec<String>>();
 		let mut words = col.iter();
 		let mut last_arg: Option<String> = None;
 
-		while let Some(arg) = args.next() {
+		for arg in self.args.iter() {
 			last_arg = Some(arg.name.clone());
 
-			if let Some(word) = words.next() {
-				map.insert(arg.name.clone(), word.clone());
+			if let Some(word) = words.next().cloned() {
+				map.insert(arg.name.clone(), word);
 			} else if arg.required {
 				return Err(Error::new(InvalidInput, format!("{} is required.", arg.name)));
 			}
@@ -60,15 +59,8 @@ impl Command {
 
 		// Append anything additional to the last argument (general use-case?)
 		if let Some(arg) = last_arg {
-			if let Some(suffix) = map.to_owned().get(&arg) {
-				let mut suffix = suffix.clone();
-
-				while let Some(word) = words.next() {
-					suffix.push_str(" ");
-					suffix.push_str(word);
-				}
-
-				map.insert(arg.clone(), suffix.clone());
+			if let Some(argv) = map.get(&arg).cloned() {
+				map.insert(arg.clone(), words.fold(argv, |a, b| a + " " + b));
 			}
 		}
 
@@ -77,13 +69,13 @@ impl Command {
 
 	pub fn help(&self) -> String {
 		let mut help: String = "USAGE".into();
-		let mut args = self.args.iter();
 
-		while let Some(arg) = args.next() {
-			help.push_str(" ");
-			help.push_str(if arg.required { "<" } else { "[" });
-			help.push_str(&arg.name);
-			help.push_str(if arg.required { ">" } else { "]" });
+		for arg in self.args.iter() {
+			if arg.required {
+				help = format!("{} <{}>", help, arg.name);
+			} else {
+				help = format!("{} [{}]", help, arg.name);
+			}
 		}
 
 		return help;
