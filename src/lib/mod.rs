@@ -56,7 +56,7 @@ impl Bot {
 		bot.cmds.insert("part".into(),
 		                Command::new(true,
 		                             "admin",
-		                             vec![CommandArg::new("channel", true)],
+		                             vec![CommandArg::new("channel", false)],
 		                             Box::new(cmd_part)));
 
 		Ok(bot)
@@ -134,12 +134,9 @@ fn cmd_kick(parameters: CommandParameters) -> Result<()> {
 				try!(parameters.server.send_kick(&parameters.target, &parameters.sender, "No you."))
 			} else if let Some(reason) = parameters.args
 				.get("reason")
-				.or(Some(&"Requested".to_string())) {
+				.or(Some(&"Requested".into())) {
 				try!(parameters.server.send_kick(&parameters.target, &nick, reason))
 			}
-		} else {
-			try!(parameters.server.send_notice(&parameters.sender,
-			                                   "Command arguments are !kick <nick> [reason]"))
 		}
 	} else {
 		try!(parameters.server.send_privmsg(&parameters.sender,
@@ -149,34 +146,36 @@ fn cmd_kick(parameters: CommandParameters) -> Result<()> {
 	Ok(())
 }
 
+fn modify_channels(channel: &String, push: bool) -> Result<()> {
+	let config = try!(Config::load(CONFIG_PATH));
+	let mut channels: Vec<String> = Vec::new();
+
+	if let Some(conf_channels) = config.channels {
+		channels = conf_channels.clone();
+	}
+
+	channels.retain(|element| element != channel);
+
+	if push {
+		channels.push(channel.clone());
+	}
+
+	let config = Config { channels: Some(channels), ..config };
+
+	try!(config.save(CONFIG_PATH));
+	Ok(())
+}
+
 fn cmd_join(parameters: CommandParameters) -> Result<()> {
 	let sender = parameters.sender;
 	let server = parameters.server;
-	let target = parameters.target;
 
-	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
-		if channel != &sender {
-			if channel.starts_with("#") && !channel.contains(",") {
-				try!(server.send_join(channel));
-
-				// TODO: Is it worth writing a more generic function for updating the config?
-				let config = server.config().clone();
-
-				if let Some(ref channels) = config.channels {
-					let mut channels = channels.clone();
-
-					channels.retain(|element| element != channel);
-					channels.push(channel.clone());
-
-					let config = Config { channels: Some(channels), ..config };
-
-					try!(config.save(CONFIG_PATH));
-				}
-			} else {
-				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
-			}
+	if let Some(channel) = parameters.args.get("channel") {
+		if channel.starts_with("#") && !channel.contains(",") {
+			try!(server.send_join(channel));
+			try!(modify_channels(channel, true));
 		} else {
-			try!(server.send_notice(&sender, &parameters.command.help()));
+			try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
 		}
 	}
 
@@ -191,19 +190,7 @@ fn cmd_part(parameters: CommandParameters) -> Result<()> {
 	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
 		if channel != &sender {
 			if channel.starts_with("#") && !channel.contains(",") {
-				// TODO: Is it worth writing a more generic function for updating the config?
-				let config = server.config().clone();
-
-				if let Some(ref channels) = config.channels {
-					let mut channels = channels.clone();
-
-					channels.retain(|element| element != channel);
-
-					let config = Config { channels: Some(channels), ..config };
-
-					try!(config.save(CONFIG_PATH));
-				}
-
+				try!(modify_channels(channel, false));
 				try!(server.send(PART(channel.clone(), None)));
 			} else {
 				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
