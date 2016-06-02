@@ -3,17 +3,13 @@ use std::collections::HashMap;
 
 mod commands;
 
-use self::commands::Command;
-use self::commands::CommandArg;
-use self::commands::CommandParameters;
+use self::commands::*;
 
 extern crate irc;
 
-use irc::client::data::Command::PRIVMSG;
-use irc::client::data::Command::PART;
+use irc::client::data::Command::*;
 use irc::client::data::Config;
-use irc::client::server::IrcServer;
-use irc::client::server::Server;
+use irc::client::server::*;
 use irc::client::prelude::ServerExt;
 
 pub static CONFIG_PATH: &'static str = "config.json";
@@ -90,14 +86,19 @@ impl Bot {
 			if let Ok(message) = message {
 				println!("{}", message);
 
-				match message.command {
-					// TODO: Handle kicks, bans, ctcp, and invites
-					PRIVMSG(ref target, ref text) => {
-						if let Some(sender) = message.source_nickname() {
+				if let Some(sender) = message.source_nickname() {
+					match message.command {
+						// TODO: Handle kicks, bans
+						PRIVMSG(ref target, ref text) => {
 							self.handle_privmsg(target.clone(), text.clone(), sender.into())
 						}
+						INVITE(ref nickname, ref channel) => {
+							self.handle_privmsg(nickname.clone(),
+							                    format!("join {}", channel),
+							                    sender.into())
+						}
+						_ => {}
 					}
-					_ => {}
 				}
 			}
 		}

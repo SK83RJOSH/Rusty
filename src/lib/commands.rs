@@ -95,7 +95,7 @@ impl Command {
 	               target: String,
 	               sender: String)
 	               -> Result<()> {
-		// TODO Restrict by group (groups.json?)
+		// TODO: Restrict by group (groups.json?)
 		if !self.owner_only || server.config().is_owner(&sender) {
 			let args = self.arguments(input);
 
