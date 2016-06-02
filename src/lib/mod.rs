@@ -27,6 +27,7 @@ impl Bot {
 			server: try!(IrcServer::from_config(config)),
 		};
 
+		// TODO: Look into simplified boxing
 		bot.cmds.insert("say".into(),
 		                Command::new(false,
 		                             "",
@@ -106,8 +107,7 @@ impl Bot {
 	fn handle_command(&self, text: String, target: String, sender: String) -> Result<()> {
 		let mut strs = text.split_whitespace();
 		let command = strs.next().unwrap();
-		let args = strs.map(|s| s.into()).collect::<Vec<String>>();
-		let input = args.join(" ");
+		let input = strs.fold("".into(), |a, b| a + " " + b);
 
 		if let Some(command) = self.cmds.get(command) {
 			try!(command.execute(input, &self.server, target, sender));
