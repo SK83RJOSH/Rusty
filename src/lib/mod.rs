@@ -1,16 +1,25 @@
-extern crate irc;
-
-mod commands;
-
 use std::io::Result;
 use std::collections::HashMap;
 
-use irc::client::prelude::*;
+mod commands;
+
+use self::commands::Command;
+use self::commands::CommandArg;
+use self::commands::CommandParameters;
+
+extern crate irc;
+
+use irc::client::data::Command::PRIVMSG;
+use irc::client::data::Command::PART;
+use irc::client::data::Config;
+use irc::client::server::IrcServer;
+use irc::client::server::Server;
+use irc::client::prelude::ServerExt;
 
 pub static CONFIG_PATH: &'static str = "config.json";
 
 pub struct Bot {
-	cmds: HashMap<String, commands::Command>,
+	cmds: HashMap<String, Command>,
 	server: IrcServer,
 }
 
@@ -23,53 +32,53 @@ impl Bot {
 		};
 
 		bot.cmds.insert("say".into(),
-		                commands::Command::new(false,
-		                                       "".into(),
-		                                       vec![commands::CommandArg {
-			                                            required: true,
-			                                            name: "text".into(),
-		                                            }],
-		                                       Box::new(cmd_say)));
+		                Command::new(false,
+		                             "".into(),
+		                             vec![CommandArg {
+			                                  required: true,
+			                                  name: "text".into(),
+		                                  }],
+		                             Box::new(cmd_say)));
 
 		bot.cmds.insert("echo".into(),
-		                commands::Command::new(false,
-		                                       "".into(),
-		                                       vec![commands::CommandArg {
-			                                            required: true,
-			                                            name: "text".into(),
-		                                            }],
-		                                       Box::new(cmd_say)));
+		                Command::new(false,
+		                             "".into(),
+		                             vec![CommandArg {
+			                                  required: true,
+			                                  name: "text".into(),
+		                                  }],
+		                             Box::new(cmd_say)));
 
 		bot.cmds.insert("kick".into(),
-		                commands::Command::new(true,
-		                                       "admin".into(),
-		                                       vec![commands::CommandArg {
-			                                            required: true,
-			                                            name: "nick".into(),
-		                                            },
-		                                            commands::CommandArg {
-			                                            required: false,
-			                                            name: "reason".into(),
-		                                            }],
-		                                       Box::new(cmd_kick)));
+		                Command::new(true,
+		                             "admin".into(),
+		                             vec![CommandArg {
+			                                  required: true,
+			                                  name: "nick".into(),
+		                                  },
+		                                  CommandArg {
+			                                  required: false,
+			                                  name: "reason".into(),
+		                                  }],
+		                             Box::new(cmd_kick)));
 
 		bot.cmds.insert("join".into(),
-		                commands::Command::new(true,
-		                                       "admin".into(),
-		                                       vec![commands::CommandArg {
-			                                            required: false,
-			                                            name: "channel".into(),
-		                                            }],
-		                                       Box::new(cmd_join)));
+		                Command::new(true,
+		                             "admin".into(),
+		                             vec![CommandArg {
+			                                  required: false,
+			                                  name: "channel".into(),
+		                                  }],
+		                             Box::new(cmd_join)));
 
 		bot.cmds.insert("part".into(),
-		                commands::Command::new(true,
-		                                       "admin".into(),
-		                                       vec![commands::CommandArg {
-			                                            required: false,
-			                                            name: "channel".into(),
-		                                            }],
-		                                       Box::new(cmd_part)));
+		                Command::new(true,
+		                             "admin".into(),
+		                             vec![CommandArg {
+			                                  required: false,
+			                                  name: "channel".into(),
+		                                  }],
+		                             Box::new(cmd_part)));
 
 		Ok(bot)
 	}
@@ -83,7 +92,7 @@ impl Bot {
 
 				match message.command {
 					// TODO: Handle kicks, bans, ctcp, and invites
-					Command::PRIVMSG(ref target, ref text) => {
+					PRIVMSG(ref target, ref text) => {
 						if let Some(sender) = message.source_nickname() {
 							self.handle_privmsg(target.clone(), text.clone(), sender.into())
 						}
@@ -127,7 +136,7 @@ impl Bot {
 	}
 }
 
-fn cmd_say(parameters: commands::CommandParameters) -> Result<()> {
+fn cmd_say(parameters: CommandParameters) -> Result<()> {
 	if let Some(text) = parameters.args.get("text") {
 		try!(parameters.server.send_privmsg(&parameters.target, text));
 	}
@@ -135,7 +144,7 @@ fn cmd_say(parameters: commands::CommandParameters) -> Result<()> {
 	Ok(())
 }
 
-fn cmd_kick(parameters: commands::CommandParameters) -> Result<()> {
+fn cmd_kick(parameters: CommandParameters) -> Result<()> {
 	if parameters.sender != parameters.target {
 		if let Some(nick) = parameters.args.get("nick") {
 			if nick == parameters.server.current_nickname() {
@@ -157,7 +166,7 @@ fn cmd_kick(parameters: commands::CommandParameters) -> Result<()> {
 	Ok(())
 }
 
-fn cmd_join(parameters: commands::CommandParameters) -> Result<()> {
+fn cmd_join(parameters: CommandParameters) -> Result<()> {
 	let sender = parameters.sender;
 	let server = parameters.server;
 	let target = parameters.target;
@@ -191,7 +200,7 @@ fn cmd_join(parameters: commands::CommandParameters) -> Result<()> {
 	Ok(())
 }
 
-fn cmd_part(parameters: commands::CommandParameters) -> Result<()> {
+fn cmd_part(parameters: CommandParameters) -> Result<()> {
 	let sender = parameters.sender;
 	let server = parameters.server;
 	let target = parameters.target;
@@ -199,7 +208,7 @@ fn cmd_part(parameters: commands::CommandParameters) -> Result<()> {
 	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
 		if channel != &sender {
 			if channel.starts_with("#") && !channel.contains(",") {
-				try!(server.send(Command::PART(channel.clone(), None)));
+				try!(server.send(PART(channel.clone(), None)));
 
 				// TODO: Is it worth writing a more generic function for updating the config?
 				let config = server.config().clone();

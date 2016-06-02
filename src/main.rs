@@ -1,16 +1,18 @@
-extern crate irc;
-
-mod lib;
-
 use std::default::Default;
 use std::io::Result;
 use std::process::exit;
+
+mod lib;
+use lib::Bot;
+use lib::CONFIG_PATH;
+
+extern crate irc;
 
 use irc::client::prelude::Config;
 
 fn main() {
 	if let Ok(config) = handle_config() {
-		let bot = lib::Bot::new(config);
+		let bot = Bot::new(config);
 
 		if let Ok(bot) = bot {
 			bot.run()
@@ -37,8 +39,8 @@ fn handle_config() -> Result<Config> {
 			};
 
 			println!("Failed to open config: {}", err);
-			try!(config.save(lib::CONFIG_PATH));
-			println!("Wrote default config to {}!", lib::CONFIG_PATH);
+			try!(config.save(CONFIG_PATH));
+			println!("Wrote default config to {}!", CONFIG_PATH);
 			println!("Now exiting...");
 
 			exit(0);
