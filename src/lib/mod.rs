@@ -209,8 +209,6 @@ fn cmd_part(parameters: CommandParameters) -> Result<()> {
 	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
 		if channel != &sender {
 			if channel.starts_with("#") && !channel.contains(",") {
-				try!(server.send(PART(channel.clone(), None)));
-
 				// TODO: Is it worth writing a more generic function for updating the config?
 				let config = server.config().clone();
 
@@ -223,6 +221,8 @@ fn cmd_part(parameters: CommandParameters) -> Result<()> {
 
 					try!(config.save(CONFIG_PATH));
 				}
+
+				try!(server.send(PART(channel.clone(), None)));
 			} else {
 				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
 			}
