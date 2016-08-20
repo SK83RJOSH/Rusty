@@ -56,7 +56,7 @@ impl Command {
 		let mut words = col.iter();
 		let mut last_arg: Option<String> = None;
 
-		for arg in self.args.iter() {
+		for arg in &self.args {
 			last_arg = Some(arg.name.clone());
 
 			if let Some(word) = words.next().cloned() {
@@ -79,7 +79,7 @@ impl Command {
 	pub fn help(&self) -> String {
 		let mut help: String = "USAGE".into();
 
-		for arg in self.args.iter() {
+		for arg in &self.args {
 			if arg.required {
 				help = format!("{} <{}>", help, arg.name);
 			} else {
@@ -87,7 +87,7 @@ impl Command {
 			}
 		}
 
-		return help;
+		help
 	}
 
 	pub fn execute(&self,
@@ -101,7 +101,7 @@ impl Command {
 			let args = self.arguments(input);
 
 			if let Ok(args) = args {
-				let ref handler = self.handler;
+				let handler = &self.handler;
 
 				try!(handler(CommandParameters {
 					command: self,

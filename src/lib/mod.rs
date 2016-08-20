@@ -89,7 +89,7 @@ impl Bot {
 
 	fn handle_privmsg(&self, target: String, text: String, sender: String) {
 		let is_private = self.server.current_nickname() == target;
-		let is_bang = text.starts_with("!");
+		let is_bang = text.starts_with('!');
 		let is_command = is_private || is_bang;
 
 		if !is_command || text.len() == 1 {
@@ -111,7 +111,7 @@ impl Bot {
 
 		if let Some(command) = self.cmds.get(command) {
 			try!(command.execute(input, &self.server, target, sender));
-		} else if !target.starts_with("#") {
+		} else if !target.starts_with('#') {
 			try!(self.server.send_privmsg(&target, &format!("{}: Unknown command", command)));
 		}
 
@@ -132,9 +132,10 @@ fn cmd_kick(parameters: CommandParameters) -> Result<()> {
 		if let Some(nick) = parameters.args.get("nick") {
 			if nick == parameters.server.current_nickname() {
 				try!(parameters.server.send_kick(&parameters.target, &parameters.sender, "No you."))
-			} else if let Some(reason) = parameters.args
-				.get("reason")
-				.or(Some(&"Requested".into())) {
+			} else {
+				let default = &"Request".into();
+				let reason = parameters.args.get("reason").unwrap_or(default);
+
 				try!(parameters.server.send_kick(&parameters.target, &nick, reason))
 			}
 		}
@@ -146,7 +147,7 @@ fn cmd_kick(parameters: CommandParameters) -> Result<()> {
 	Ok(())
 }
 
-fn modify_channels(channel: &String, push: bool) -> Result<()> {
+fn modify_channels(channel: &str, push: bool) -> Result<()> {
 	let config = try!(Config::load(CONFIG_PATH));
 	let mut channels: Vec<String> = Vec::new();
 
@@ -157,7 +158,7 @@ fn modify_channels(channel: &String, push: bool) -> Result<()> {
 	channels.retain(|element| element != channel);
 
 	if push {
-		channels.push(channel.clone());
+		channels.push(String::from(channel));
 	}
 
 	let config = Config { channels: Some(channels), ..config };
@@ -171,7 +172,7 @@ fn cmd_join(parameters: CommandParameters) -> Result<()> {
 	let server = parameters.server;
 
 	if let Some(channel) = parameters.args.get("channel") {
-		if channel.starts_with("#") && !channel.contains(",") {
+		if channel.starts_with('#') && !channel.contains(',') {
 			try!(server.send_join(channel));
 			try!(modify_channels(channel, true));
 		} else {
@@ -186,18 +187,17 @@ fn cmd_part(parameters: CommandParameters) -> Result<()> {
 	let sender = parameters.sender;
 	let server = parameters.server;
 	let target = parameters.target;
+	let channel = parameters.args.get("channel").unwrap_or(&target);
 
-	if let Some(channel) = parameters.args.get("channel").or(Some(&target)) {
-		if channel != &sender {
-			if channel.starts_with("#") && !channel.contains(",") {
-				try!(modify_channels(channel, false));
-				try!(server.send(PART(channel.clone(), None)));
-			} else {
-				try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
-			}
+	if channel != &sender {
+		if channel.starts_with('#') && !channel.contains(',') {
+			try!(modify_channels(channel, false));
+			try!(server.send(PART(channel.clone(), None)));
 		} else {
-			try!(server.send_notice(&sender, &parameters.command.help()));
+			try!(server.send_notice(&sender, &format!("{} is not a valid channel.", &channel)));
 		}
+	} else {
+		try!(server.send_notice(&sender, &parameters.command.help()));
 	}
 
 	Ok(())
